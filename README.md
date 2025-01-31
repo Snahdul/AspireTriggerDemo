@@ -48,23 +48,6 @@ Ensure you have the following installed before running the project:
 - ✅ **Visual Studio 2022**  
 - ✅ **Docker**  
 
-## **🚀 Getting Started**  
-
-1️⃣ **Clone the repository:**  
-```sh
-git clone https://github.com/your-repo-name.git
-cd your-repo-name
-```
-2️⃣ **Run the Aspire application:**  
-```sh
-dotnet run --project AppHost
-```
-3️⃣ **Start the Azure Functions app:**  
-```sh
-func start --script-root QueueFunctionApp
-```
-4️⃣ **Test the queue processing by adding a message** to Azure Storage Queue.  
-
 ## **📜 License**  
 
 This project is licensed under the [MIT License](LICENSE).  
