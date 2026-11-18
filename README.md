@@ -1,28 +1,38 @@
-Here’s a **GitHub-ready README** with a polished and Aspire-focused structure:  
+# .NET Aspire with Azure Functions and Azure Queue Storage
 
----
+A small **.NET 9 / C# 13** sample demonstrating how to run Azure Functions and Azure Queue Storage together using **.NET Aspire** and a local storage emulator.
 
-# **Aspire with Azure Functions & Azure Storage**  
+The example implements an event-driven flow: an HTTP-triggered function writes a message to a storage queue, and a queue-triggered function processes it.
 
-🚀 **A distributed application built with .NET 9 and C# 13, leveraging Azure Functions and Azure Storage for modern cloud-native development.** This project is configured for local development using an emulator, making it easy to test and iterate.  
+## Overview
 
-## **🔹 Overview**  
+The Aspire AppHost coordinates the local application:
 
-This project demonstrates how to integrate **Aspire**, **Azure Functions**, and **Azure Storage** in a distributed application. It provides a scalable architecture while keeping the development experience smooth and efficient.  
+- Starts Azure Storage using an emulator.
+- Configures the Azure Storage Queues resource.
+- Starts the Azure Functions project with the required storage references and dependencies.
 
-### **📌 Key Features**  
+This repository focuses on **local development and integration**, not on deploying a production Azure environment.
 
-- **Aspire-powered** application host for streamlined orchestration.  
-- **Azure Functions** with **Queue Storage bindings** for event-driven processing.  
-- **Local development support** via an **Azure Storage emulator**.  
+## Technologies
 
-## **⚠️ Solving an Azure Functions Configuration Challenge**  
+- .NET 9 and C# 13
+- .NET Aspire 9
+- Azure Functions v4 (isolated worker)
+- Azure Queue Storage
+- Azure Storage emulator (containerized with Docker)
 
-While working with **Aspire and Azure Functions** in a **.NET 9 / C# 13 project**, I encountered an issue:  
+## Message flow
 
-> **Custom hosting environments do not always inherit default configurations.**  
+1. `QueueWriterFunction` is invoked through an HTTP `GET` or `POST` request.
+2. The function uses `QueueClient` to send a plain-text message to the `hami-queue` queue.
+3. `QueueTriggerFunction` receives the queued message and writes its contents to the application log.
 
-This caused unexpected **message decoding errors** in Azure Queue Storage bindings. The fix? **Explicitly setting** `"messageEncoding": "none"` in `host.json`. This ensures proper message handling without decoding issues.  
+## Queue message encoding: a configuration issue
+
+During development, the queue-triggered function encountered message decoding errors. The producer sends plain-text messages through the Azure Storage Queues client, while the Azure Functions queue trigger must be configured to interpret those messages using the same encoding.
+
+The solution in this example is to set `messageEncoding` to `none` in `QueueFunctionApp/host.json`:
 
 ```json
 {
@@ -35,23 +45,50 @@ This caused unexpected **message decoding errors** in Azure Queue Storage bindin
 }
 ```
 
-## **📁 Project Structure**  
+This explicitly configures the queue trigger to consume the unencoded messages sent by `QueueWriterFunction`. An encoding mismatch can otherwise lead to failed processing attempts and messages being moved to a poison queue.
 
-- **`AppHost/`** – The Aspire-based host that configures and runs the distributed application.  
-- **`QueueFunctionApp/`** – An Azure Functions project that processes messages from an Azure Storage queue.  
+**Takeaway:** When producing and consuming Azure Queue Storage messages, ensure that the sender and the queue-trigger binding use compatible message encodings.
 
-## **⚙️ Prerequisites**  
+## Project structure
 
-Ensure you have the following installed before running the project:  
+```text
+AspireTriggerDemo/
+├── AppHost/
+│   ├── AppHost.csproj
+│   └── Program.cs
+├── QueueFunctionApp/
+│   ├── QueueFunctionApp.csproj
+│   ├── Program.cs
+│   ├── QueueWriterFunction.cs
+│   ├── QueueTriggerFunction.cs
+│   └── host.json
+└── AspireTriggerDemo.sln
+```
 
-- ✅ **.NET 9 SDK**  
-- ✅ **Visual Studio 2022**  
-- ✅ **Docker**  
+- **`AppHost/`** — Aspire orchestration, storage emulator, queue resources and Azure Functions integration.
+- **`QueueFunctionApp/`** — HTTP-triggered queue producer and queue-triggered message consumer.
 
-## **📜 License**  
+## Prerequisites
 
-This project is licensed under the [MIT License](LICENSE).  
+- **.NET 9 SDK**
+- **Docker** for the local storage emulator
+- **Visual Studio 2022** or another compatible .NET development environment (optional)
 
----
+## Running locally
 
-This README follows **GitHub best practices**, making it clear, engaging, and informative while maintaining the **Aspire** focus. Let me know if you'd like any tweaks! 🚀
+1. Start Docker.
+2. Clone this repository.
+3. From the repository root, start the Aspire AppHost:
+
+   ```bash
+   dotnet run --project AppHost/AppHost.csproj
+   ```
+
+4. Use the local Azure Functions HTTP endpoint for `QueueWriter` to send a message.
+5. Inspect the function logs to verify that `QueueTriggerFunction` receives and processes the message.
+
+The Aspire dashboard and function endpoint addresses are displayed by the local development environment.
+
+## License
+
+Licensed under the [MIT License](LICENSE.txt).
